@@ -66,3 +66,13 @@ cd docs
 sphinx-apidoc -o . ../titanic_ml_model
 make html
 ```
+
+# Building Coverage Report
+
+Sphinx Documentation can be executed by running the following:
+
+```bash
+coverage run -m pytest tests
+coverage report -m
+coverage html
+```

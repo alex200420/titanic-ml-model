@@ -96,8 +96,8 @@ class TitanicModel:
                 The predicted labels for the input data.
         """
         ...
-        if self.model is None:
-            raise Exception("The model must be trained before making predictions")
+        if not hasattr(self.model, 'n_iter_'):
+            raise ValueError("The model must be trained before making predictions")
 
         X_scaled = self.scaler.transform(X)
         probs = self.model.predict_proba(X_scaled)[:,1]
@@ -113,8 +113,8 @@ class TitanicModel:
             summary_string : str
                 The string that summarizes the trained model.
         """
-        if self.model is None:
-            raise Exception("The model must be trained before summarizing it")
+        if not hasattr(self.model, 'n_iter_'):
+            raise ValueError("The model must be trained before summarizing it")
         
         summary_string = ""
         summary_string += f"Model parameters:\n"
@@ -153,8 +153,8 @@ class TitanicModel:
             metrics : dict
                 The metrics computed from the test dataset.
         """
-        if self.model is None:
-            raise Exception("The model must be trained before evaluating it")
+        if not hasattr(self.model, 'n_iter_'):
+            raise ValueError("The model must be trained before evaluating it")
 
         predictions = self.predict(X)
         accuracy = accuracy_score(y, predictions)

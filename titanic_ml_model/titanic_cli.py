@@ -47,7 +47,6 @@ class TitanicCLI:
         preprocessor.feature_engineering()
         preprocessor.handle_missing_values()
         preprocessor.transform_data()
-
         # Train the model
         model = TitanicModel(5)
         model.train(preprocessor.train_df, preprocessor.train_y)

@@ -11,7 +11,9 @@ setup(
         'scikit-learn',
         'typeguard',
         'shap',
-        'matplotlib'
+        'matplotlib',
+        'pytest',
+        'coverage'
     ],
     entry_points={
         'console_scripts': [

@@ -34,13 +34,17 @@ class DataPreprocessor:
             sample_df : pd.DataFrame
                 Training DataFrame
         """
-        if sample_df is None or sample_df.empty:
-            logger.error("Provided DataFrame is None or empty.")
+        if sample_df is None:
+            logger.error("Provided DataFrame is None.")
             raise ValueError("No DataFrame was provided for DataPreprocessor class.")
         
         if not isinstance(sample_df, pd.DataFrame):
             logger.error("Provided sample_df is not a pandas DataFrame.")
             raise TypeError("Provided object is not a pandas DataFrame.")
+
+        if sample_df.empty:
+            logger.error("Empty DataFrame was provided for DataPreprocessor class.")
+            raise ValueError("Empty DataFrame was provided for DataPreprocessor class.")
         
         self.train_df = sample_df
         self.train_y = None
@@ -94,7 +98,7 @@ class DataPreprocessor:
         df['cabin_size'] = df['cabin'].apply(self._get_cabin_size)
         df['ticket_label'] = df['ticket'].apply(self._get_ticket_label)
         df['ticket_number'] = df['ticket'].apply(self._get_ticket_number)
-        df['name_title'] = df.name.apply(self._get_name_title)
+        df['name_title'] = df['name'].apply(self._get_name_title)
         if oos_df is None:
             self.train_df = df
         logger.info('Features Engineered')
