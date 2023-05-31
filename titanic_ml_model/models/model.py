@@ -131,8 +131,10 @@ class TitanicModel:
             summary_string += f"{self.sample_X.columns[i]}: {np.mean(np.abs(shap_values[:, i]))}\n"
 
         # Generate SHAP summary plot and save it as a png file
-        shap.summary_plot(shap_values, self.sample_X, feature_names=self.sample_X.columns, show=False)
-        plt.savefig("shap_summary_plot.png")
+        shap.summary_plot(shap_values, self.sample_X, feature_names=self.sample_X.columns, plot_type = 'bar', show=False)
+        save_filepath = './logs/shap_summary_plot.png'
+        os.makedirs(os.path.dirname(save_filepath), exist_ok=True)
+        plt.savefig(save_filepath)
         logger.info("SHAP summary plot saved as shap_summary_plot.png")
 
         return summary_string

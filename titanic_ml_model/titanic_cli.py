@@ -1,6 +1,16 @@
 import pandas as pd
 from .models.model import TitanicModel
 from .data.preprocessing import DataPreprocessor
+import logging
+import os
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+log_filepath = './logs/logs.txt'
+os.makedirs(os.path.dirname(log_filepath), exist_ok=True)
+fh = logging.FileHandler('./logs/logs.txt')
+logger.addHandler(fh)
 
 class TitanicCLI:
     """
@@ -47,10 +57,16 @@ class TitanicCLI:
         preprocessor.feature_engineering()
         preprocessor.handle_missing_values()
         preprocessor.transform_data()
+        X_train, X_test, y_train, y_test = DataPreprocessor.train_test_split(preprocessor.train_df, preprocessor.train_y)
         # Train the model
         model = TitanicModel(5)
-        model.train(preprocessor.train_df, preprocessor.train_y)
+        model.train(X_train, y_train)
 
+        logger.info("Model Summarization\n" + model.summarize_model())
+
+        evaluation_metrics = model.evaluate(X_test, y_test)
+        logger.info("Model Test Metrics\n" + str(evaluation_metrics))
+        
         # Save the model and preprocessor
         model.save(self.model_path)
         preprocessor.save(self.preprocessor_path)

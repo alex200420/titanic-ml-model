@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from .core.transformers import TargetEncoderTransformer, FillMeanTransformer, LabelTransformer
 from collections import OrderedDict
+from sklearn.model_selection import train_test_split
 import logging
 import pickle
 import re
@@ -221,6 +222,10 @@ class DataPreprocessor:
         df.to_csv(path, index = False)
         logger.info('Predictions Saved.')
 
+    @staticmethod
+    def train_test_split(X: pd.DataFrame, y: pd.Series):
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        return X_train, X_test, y_train, y_test
 
     @staticmethod
     def _get_cabin_number(x:str):
