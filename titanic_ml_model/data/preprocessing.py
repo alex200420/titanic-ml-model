@@ -1,47 +1,42 @@
-"""
-Instructions:
-
-- Fill in the methods of the DataModeler class to produce the same printed results
-  as in the comments labeled '<Expected Output>' in the second half of the file.
-- The DataModeler should predict the 'outcome' from the columns 'amount' and 'transaction date.'
-  Your model should ignore the 'customer_id' column.
-- For the modeling methods `fit`, `predict` and `model_summary` you can use any appropriate method.
-  Try to get 100% accuracy on both training and test, as indicated in the output.
-- Your solution will be judged on both correctness and code quality.
-- Good luck, and have fun!
-
-"""
-
 from __future__ import annotations
 import numpy as np
 import pandas as pd
-from typeguard import typechecked # this makes sure data types follow Data Type Hints (Optional)
-from sklearn.tree import DecisionTreeClassifier
-from scipy.special import softmax
 from .core.transformers import TargetEncoderTransformer, FillMeanTransformer, LabelTransformer
 from collections import OrderedDict
-import shap
 import logging
 import pickle
 import re
 import numpy as np
-from typing import Union
+import os
 
 logging.basicConfig(level=logging.WARNING) #configurated so as to show the expected output in this exercise
 logger = logging.getLogger(__name__) # it can be changed to INFO to show all LOGs
 
 class DataPreprocessor:
     """
-    This class is responsible for the preprocessing of data for the Titanic Machine Learning model.
+    A class used to preprocess the Titanic dataset.
+
+    Attributes
+    ----------
+    train_df : object
+        The training DataFrame
+    train_y : object
+        The training objective
+    pipeline : dict
+        Transformer Pipeline
     """
     def __init__(self, sample_df):
         """
-        Initializes a new instance of DataPreprocessor.
-        :param sample_df: The sample dataframe to be used for preprocessing.
+        Constructs all the necessary attributes for the DataPreprocessor object.
+
+        Parameters
+        ----------
+            sample_df : pd.DataFrame
+                Training DataFrame
         """
         if sample_df is None or sample_df.empty:
             logger.error("Provided DataFrame is None or empty.")
-            raise ValueError("No DataFrame was provided for DataModeler class.")
+            raise ValueError("No DataFrame was provided for DataPreprocessor class.")
         
         if not isinstance(sample_df, pd.DataFrame):
             logger.error("Provided sample_df is not a pandas DataFrame.")
@@ -53,16 +48,23 @@ class DataPreprocessor:
             'Target Encoding': TargetEncoderTransformer(['embarked', 'cabin_letter', 'ticket_label', 'name_title'], 'survived'),
             'Fill NA Mean': FillMeanTransformer(['cabin_number', 'age']),
             'Label Encoding': LabelTransformer(['sex'])
-        }) 
-        self.feature_means = {}
+        })
 
     def prepare_data(self, oos_df: pd.DataFrame = None) -> pd.DataFrame:
         """
-        Prepares the data for preprocessing.
-        :param oos_df: The out-of-sample dataframe. If None, train_df will be used.
-        :return: The prepared dataframe.
+        Prepares the data for feature engineering.
+
+        Parameters
+        ----------
+        oos_df : pd.DataFrame, optional
+            The out-of-sample dataframe. If None, uses the train_df attribute (default is None).
+
+        Returns
+        -------
+        df : pd.DataFrame
+            The prepared dataframe.
         """
-        logger.info('Preparing Data')
+        logger.info('Preparing Data ...')
         df = self.train_df if oos_df is None else oos_df
         df.columns = df.columns.str.lower()
 
@@ -72,11 +74,19 @@ class DataPreprocessor:
 
     def feature_engineering(self, oos_df: pd.DataFrame = None) -> pd.DataFrame:
         """
-        Engineers new features from the existing ones.
-        :param oos_df: The out-of-sample dataframe. If None, train_df will be used.
-        :return: The dataframe with engineered features.
+        Performs feature engineering on the data.
+
+        Parameters
+        ----------
+        oos_df : pd.DataFrame, optional
+            The out-of-sample dataframe. If None, uses the train_df attribute (default is None).
+
+        Returns
+        -------
+        df : pd.DataFrame
+            The dataframe with engineered features.
         """
-        logger.info('Engineering Features')
+        logger.info('Engineering Features ...')
         df = self.train_df if oos_df is None else oos_df
         # Method to engineer new features
         df['cabin_number'] = df['cabin'].apply(self._get_cabin_number)
@@ -92,11 +102,19 @@ class DataPreprocessor:
 
     def handle_missing_values(self, oos_df: pd.DataFrame = None) -> pd.DataFrame:
         """
-        Handles Missing Values in Data
-        :param oos_df: The out-of-sample dataframe. If None, train_df will be used.
-        :return: The dataframe with no missing features.
+        Handles missing values in the data.
+
+        Parameters
+        ----------
+        oos_df : pd.DataFrame, optional
+            The out-of-sample dataframe. If None, uses the train_df attribute (default is None).
+
+        Returns
+        -------
+        df : pd.DataFrame
+            The dataframe with handled missing values.
         """
-        logger.info('Filling Missing Values')
+        logger.info('Filling Missing Values ...')
         df = self.train_df if oos_df is None else oos_df
 
         # Method to handle missing values
@@ -106,10 +124,10 @@ class DataPreprocessor:
         df.loc[~df.ticket_label.isin(df.ticket_label.value_counts(1).index[:5].values),'ticket_label'] = 'Misc'
         df['ticket_number'] = np.log1p(df['ticket_number']).fillna(0)
         df['cabin_letter'] = df['cabin_letter'].fillna('U')
-        df = df[
-            ['pclass','sex','age','sibsp','parch','fare','embarked','cabin_number','cabin_letter','cabin_size',
-             'ticket_label','ticket_number','name_title','survived'
-        ]]
+
+        cols = df.columns[df.columns.isin(['pclass','sex','age','sibsp','parch','fare','embarked','cabin_number','cabin_letter','cabin_size',
+                     'ticket_label','ticket_number','name_title','survived'])]  
+        df = df[cols]
         if oos_df is None:
             self.train_df = df
         logger.info('Missing Values Filled')
@@ -117,42 +135,89 @@ class DataPreprocessor:
     
     def transform_data(self, oos_df: pd.DataFrame = None) -> pd.DataFrame:
         """
-        Transform Data and Saves Learned Information in Pipeline
-        :param oos_df: The out-of-sample dataframe. If None, train_df will be used.
-        :return: The dataframe with no missing features.
+        Transforms the data using the pipeline.
+
+        Parameters
+        ----------
+        oos_df : pd.DataFrame, optional
+            The out-of-sample dataframe. If None, uses the train_df attribute (default is None).
+
+        Returns
+        -------
+        df : pd.DataFrame
+            The transformed dataframe.
         """
-        logger.info('Transforming Data')
+        logger.info('Transforming Data ...')
+        df = self.train_df if oos_df is None else oos_df
         for step_name, _ in self.pipeline.items():
             if oos_df is None:
-                df = self.pipeline[step_name].fit_transform(self.train_df)
-                self.train_df = df
-            else:
-                df = self.pipeline[step_name].transform(oos_df)
+                self.pipeline[step_name].fit(df)
+            df = self.pipeline[step_name].transform(df)
+        if 'survived' in df.columns:
+            self.train_y = df['survived']
+            self.train_df = df.drop(['survived'], axis = 1)
         logger.info('Data Transformed')
         return df
-
+    
     def save(self, path: str) -> None:
-        '''
-        Save the DataPreprocessor so it can be re-used.
-        :param path: Path to save model to.
-        '''
+        """
+        Saves the DataPreprocessor to a file.
+
+        Parameters
+        ----------
+        path : str
+            The path where the DataPreprocessor will be saved.
+        """
         logger.info('Saving DataPreprocessor')
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'wb') as file:
             pickle.dump(self, file)
         logger.info('DataPreprocessor Succesfully Saved')
 
     @staticmethod
     def load(path: str) -> DataPreprocessor:
-        '''
-        Load the DataPreprocessor.
-        :param path: Path to load model from.
-        '''
-        logger.info('Loading DataModeler')
+        """
+        Loads a DataPreprocessor from a file.
+
+        Parameters
+        ----------
+        path : str
+            The path where the DataPreprocessor is located.
+
+        Returns
+        -------
+        model : DataPreprocessor
+            The loaded DataPreprocessor.
+        """
+        logger.info('Loading DataPreprocessor ...')
         with open(path, 'rb') as file:
             model = pickle.load(file)
             logger.info('DataPreprocessor Succesfully Loaded')
             return model
-    
+        
+    @staticmethod
+    def save_predictions(path:str, df: pd.DataFrame, yhat: np.array) -> None:
+        """
+        Saves the predictions along with the original data to a CSV file at the given path.
+
+        Parameters
+        ----------
+        path : str
+            Path where the CSV file will be written
+        data : pd.DataFrame
+            Original data that the predictions are based on
+        predictions : np.array
+            Predictions to be saved
+        """
+        logger.info('Saving Predictions ...')
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        df = df.copy()
+        df['survived'] = yhat
+        df = df.reset_index()[['passengerid', 'survived']]
+        df.to_csv(path, index = False)
+        logger.info('Predictions Saved.')
+
+
     @staticmethod
     def _get_cabin_number(x:str):
         return pd.Series([int(ticket_num) for ticket_num in re.findall("\d+", x)]).mean() if not pd.isnull(x) else np.nan
