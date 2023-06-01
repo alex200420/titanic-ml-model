@@ -163,7 +163,7 @@ class TitanicModel:
         f1 = f1_score(y, predictions)
         precision = precision_score(y, predictions)
         recall = recall_score(y, predictions)
-        cm = confusion_matrix(y, predictions)
+        cm = confusion_matrix(y, predictions).tolist()
 
         metrics = {
             'accuracy': accuracy,
